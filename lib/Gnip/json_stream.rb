@@ -3,7 +3,12 @@ require 'em/buftok'
 require 'uri'
 require 'simple_oauth'
 
-module Twitter
+#
+# Based on Voloko's "Twitter-Stream" https://github.com/voloko/twitter-stream
+# Refactored to accept Gnips redirect
+#
+
+module Gnip
   class JSONStream < EventMachine::Connection
     MAX_LINE_LENGTH = 1024*1024
 
@@ -35,6 +40,7 @@ module Twitter
       :oauth        => {},
       :filters      => [],
       :params       => {},
+      :debug        => false,
     }
 
     attr_accessor :code
@@ -106,10 +112,12 @@ module Twitter
     end
 
     def receive_data data
+      puts "\n\rRESPONSE ---\n\r #{data} \n\r//RESPONSE ---\n\r" if @options[:debug]
       begin
         @buffer.extract(data).each do |line|
           receive_line(line)
         end
+        set_redirect if @redirect
       rescue Exception => e
         receive_error("#{e.class}: " + [e.message, e.backtrace].flatten.join("\n\t"))
         close_connection
@@ -180,6 +188,24 @@ module Twitter
       @buffer  = BufferedTokenizer.new("\r", MAX_LINE_LENGTH)
     end
 
+    def set_redirect
+      @headers.each do |ln|
+        name, val = ln.split(':', 2)
+        @options[:session] = $1 if val =~ /session_token=(.*?);.*?/
+        @options[:cookie] = $1 if val =~ /_base_session=(.*?);.*?/
+        @redirect_url = val.strip if name.strip.downcase == 'location'
+      end
+      redirect_uri = URI.parse(@redirect_url)
+      puts "Recieved '#{@code} Redirect', redirecting to #{redirect_uri.host}"
+      reset_state
+
+      @options[:host] = redirect_uri.host
+      @options[:path] = redirect_uri.path
+      @redirect = false
+
+      send_request
+    end
+
     def send_request
       data = []
       request_uri = @options[:path]
@@ -210,6 +236,10 @@ module Twitter
         data << "Authorization: #{oauth_header}"
       end
 
+      if @options[:session]
+        data << "Cookie: session_token=#{@options[:session]}"
+      end
+
       if @proxy && @proxy.user
         data << "Proxy-Authorization: Basic " + ["#{@proxy.user}:#{@proxy.password}"].pack('m').delete("\r\n")
       end
@@ -219,6 +249,7 @@ module Twitter
       end
       data << "\r\n"
 
+      puts "\n\rSENT ---\n\r #{data.join("\r\n") << content} \n\r//SENT ---\n\r" if @options[:debug]
       send_data data.join("\r\n") << content
     end
 
@@ -251,6 +282,7 @@ module Twitter
       if ln.empty?
         reset_timeouts if @code == 200
         @state = :stream
+        @redirect = true if @code == 302
       else
         headers << ln
       end
@@ -259,8 +291,8 @@ module Twitter
     def parse_response_line ln
       if ln =~ /\AHTTP\/1\.[01] ([\d]{3})/
         @code = $1.to_i
-        @state = :headers
-        receive_error("invalid status code: #{@code}. #{ln}") unless @code == 200
+        @state = :headers if @code == 200 || 302
+        receive_error("invalid status code: #{@code}. #{ln}") unless @code == 200 || 302
       else
         receive_error('invalid response')
         close_connection

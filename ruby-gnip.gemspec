@@ -1,16 +1,16 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{twitter-stream}
+  s.name = %q{ruby-gnip}
   s.version = "0.1.13"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Vladimir Kolesnikov"]
+  s.authors = ["Ryan Marshall", "Vladimir Kolesnikov"]
   s.date = %q{2010-10-05}
   s.description = %q{Simple Ruby client library for twitter streaming API. Uses EventMachine for connection handling. Adheres to twitter's reconnection guidline. JSON format only.}
-  s.summary = %q{Twitter realtime API client}
-  s.homepage = %q{http://github.com/voloko/twitter-stream}
-  s.email = %q{voloko@gmail.com}
+  s.summary = %q{Gnip realtime API client}
+  s.homepage = %q{http://github.com/ryanmarshall/ruby-gnip}
+  s.email = %q{rmarsh000@gmail.com}
 
   s.platform                  = Gem::Platform::RUBY
   s.rubygems_version          = %q{1.3.6}
