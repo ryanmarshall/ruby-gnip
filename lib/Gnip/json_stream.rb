@@ -237,7 +237,7 @@ module Gnip
       end
 
       if @options[:session]
-        data << "Cookie: session_token=#{@options[:session]}"
+        #data << "Cookie: session_token=#{@options[:session]}"
       end
 
       if @proxy && @proxy.user
