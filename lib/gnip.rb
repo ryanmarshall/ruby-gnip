@@ -6,6 +6,8 @@ require 'uri'
 require 'simple_oauth'
 
 require 'gnip'
+require 'gnip/json_stream'
+require 'gnip/rules'
 
 module Gnip
   RULES_URI = "https://%s.gnip.com/data_collectors/%s/rules.json"
